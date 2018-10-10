@@ -28,8 +28,19 @@ class Task():
 
     def get_reward(self):
         """Uses current pose of sim to return reward."""
-        reward = 1.-.3*(abs(self.sim.pose[:3] - self.target_pos)).sum()
-        return reward
+        #reward = 1.-.3*(abs(self.sim.pose[:3] - self.target_pos)).sum()
+        reward = 0
+        #penalty for distance between target and target position + stablility
+        penalty = abs(np.square(self.sim.pose[:3] - self.target_pos)).sum() + abs(self.sim.pose[3:6]).sum()
+        
+        #for proximity with target
+        distance = np.sqrt((self.sim.pose[0] - self.target_pos[0]) ** 2 + (self.sim.pose[1] - self.target_pos[1]) **2 + (self.sim.pose[2] - self.target_pos[2]) ** 2)
+        if distance < 5:
+            reward += 100
+            
+        reward += 50
+        reward += reward - penalty * 0.01
+        return reward 
 
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""

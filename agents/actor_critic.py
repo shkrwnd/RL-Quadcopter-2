@@ -5,7 +5,7 @@ from collections import namedtuple,deque
 import numpy as np
 
 class OUNoise:
-    def __init__(self,size,mu,theta,sigma):
+    def __init__(self,size,nu,theta,sigma):
         self.mu = mu * np.ones(size)
         self.theta = theta
         self.sigma = sigma
@@ -80,7 +80,9 @@ class Critic:
         self.model.compile(optimizer=optimizer,loss='mse')
         action_gradients = K.gradients(q,actions)
         
-        self.get_action_gradients = K.function(inputs=[*self.model.input,K.learning_phase()],outputs=action_gradients)
+        self.get_action_gradients = K.function(
+        inputs=[*self.model.input,K.learning_phase()],
+        outputs=action_gradients)
         
 class ReplayBuffer:
     def __init__(self,buffer_size,batch_size):
@@ -109,14 +111,14 @@ class PolicyGradient():
         self.actor_local = Actor(self.state_size, self.action_size , self.action_low , self.action_high)
         self.actor_target = Actor(self.state_size , self.action_size, self.action_low,self.action_high)
         
-        self.critic_local = Critic(self.state_size,self.action_size)
-        self.critic_target = Critic(self.state_size,self.action_size )
+        self.critic_local = Critic(self.state_size,self.action_size,self.action_low,self.action_high)
+        self.critic_target = Critic(self.state_size,self.action_size , self.action_low,self.action_high)
         
-        #self.critic_target = Critic(self.state_size,self.action_size,self.action_low,self.action_high)
-        self.exploration_mu = 0
-        self.exploration_theta = 0.15
+        self.critic_target = Critic(self.state_size,self.action_size,self.action_low,self.action_high)
+        self.exploation_mu = 0
+        self.exploation_theta = 0.15
         self.exploration_sigma = 0.001
-        self.noise = OUNoise(self.action_size,self.exploration_mu,self.exploration_theta,self.exploration_sigma)
+        self.noise = OUNoise(self.action_size,self.exploration_mu,self.exploration_theta,self.exploration_mu,self.exploration_sigma)
         self.buffer_size = 100000
         self.batch_size = 64
         self.memory = ReplayBuffer(self.buffer_size,self.batch_size)
@@ -135,23 +137,23 @@ class PolicyGradient():
         self.score = 0
         return state
     def step(self,action,reward,next_state,done):
-        self.memory.add(self.last_state,action,reward,next_state,done)
-        if (len(self.memory) > self.batch_size):
-            experiences = self.memory.sample()
-            self.learn(experiences)
-        self.last_state = next_state
-        self.score += reward
-        if (done):
-            if self.score > self.best_score:
-                self.best_score= self.score
+          self.memory.add(self.last_state,action,reward,next_state,done)
+            if len(self.memory) > self.batch_size:
+                experiences = self.memory.sample()
+                self.learn(experiences)
+            self.last_state = next_state
+            self.score += reward
+            if done:
+                if self.score > self.best_score:
+                    self.best_score= self.score
     def act(self,states):
-        state = np.reshape(states,[-1,self.state_size])
+        state = np.reshape(states,[-1,self.state])
         action = self.actor_local.model.predict(state)[0]
         return list(action + self.noise.sample())
     
     def learn(self,experiences):
         states = np.vstack([e.state for e in experiences if e is not None])
-        actions = np.array([e.action for e in experiences if e is not None]).astype(np.float32).reshape(-1,self.action_size)
+        actions = array([e.action for e in experiences if e is not None]).astype(np.float32).reshape(-1,self.action_size)
         rewards = np.array([e.reward for e in experiences if e is not None]).astype(np.float32).reshape(-1,1)
         dones = np.array([e.done for e in experiences if e is not None]).astype(np.uint).reshape(-1,1)
         next_states = np.vstack([e.next_state for e in experiences if e is not None])
