@@ -35,12 +35,16 @@ class Task():
         
         #for proximity with target
         distance = np.sqrt((self.sim.pose[0] - self.target_pos[0]) ** 2 + (self.sim.pose[1] - self.target_pos[1]) **2 + (self.sim.pose[2] - self.target_pos[2]) ** 2)
-        if distance < 5:
-            reward += 100
+#         if distance < 5:
+#             reward += 100
             
-        reward += 50
+        #reward += 50
+        done = False
+        if(self.sim.pose[2] > self.target_pos[2]):
+            reward += 50
+            done = True
         reward += reward - penalty * 0.01
-        return reward 
+        return reward ,done
 
     def step(self, rotor_speeds):
         """Uses action to obtain next state, reward, done."""
@@ -48,7 +52,8 @@ class Task():
         pose_all = []
         for _ in range(self.action_repeat):
             done = self.sim.next_timestep(rotor_speeds) # update the sim pose and velocities
-            reward += self.get_reward() 
+            delta_reward,done_right  = self.get_reward() 
+            reward += delta_reward
             pose_all.append(self.sim.pose)
         next_state = np.concatenate(pose_all)
         return next_state, reward, done
